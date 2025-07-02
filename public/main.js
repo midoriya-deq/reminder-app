@@ -1,6 +1,6 @@
 document.getElementById("reminderForm").addEventListener("submit", function (event) {
     event.preventDefault(); // ページのリロードを防ぐ
-
+// test
     const message = document.getElementById("message").value;
     const time = document.getElementById("time").value;
 
