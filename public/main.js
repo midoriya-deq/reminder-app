@@ -7,7 +7,8 @@ document.getElementById("reminderForm").addEventListener("submit", function (eve
     const newReminder = { message, time };
 
     // サーバーにデータを送信
-    fetch("/addReminder", {
+    // fetch("/addReminder", {
+    fetch("http://127.0.0.1:8080/addReminder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReminder)
