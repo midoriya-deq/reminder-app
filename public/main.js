@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .then(response => response.json())
     .then(data => {
     　data.sort((a, b) => {
-    　　return (a.time > b.time) ? -1 : 1;
+    　　return (a.time > b.time) ? 1 : -1;
     　})
       data.forEach(reminder => {
         const li = document.createElement("li");
