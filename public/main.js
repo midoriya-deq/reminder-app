@@ -1,59 +1,42 @@
+// リマインダーの追加フォーム送信処理
 document.getElementById("reminderForm").addEventListener("submit", function (event) {
-    event.preventDefault(); // ページのリロードを防ぐ
-// test
+    event.preventDefault();
+
     const message = document.getElementById("message").value;
     const time = document.getElementById("time").value;
 
     const newReminder = { message, time };
 
-    // サーバーにデータを送信
     fetch("/addReminder", {
-    // fetch("http://127.0.0.1:8080/addReminder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReminder)
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => {
-        alert("リマインダーが追加されました！");
-        location.reload(); // ページを更新して新しいリマインダーを表示
+        alert("リマインダーが追加されました！ 内容: " + JSON.stringify(data));
+        location.reload(); // 更新
     })
-    .catch(error => console.error("エラー:", error));
+    .catch(error => {
+        console.error("追加エラー:", error);
+    });
 });
 
-// document.addEventListener("DOMContentLoaded", function () {
-//   const reminderList = document.getElementById("reminderList");
-
-//   // AjaxでJSONデータを取得
-//   fetch("reminders.json")
-//     .then(response => response.json())
-//     .then(data => {
-//     　data.sort((a, b) => {
-//     　　return (a.time > b.time) ? 1 : -1;
-//     　})
-//       data.forEach(reminder => {
-//         const li = document.createElement("li");
-//         li.textContent = `${reminder.message} - ${new Date(reminder.time).toLocaleString()}`;
-//         reminderList.appendChild(li);
-//       });
-//     })
-//     .catch(error => console.error("データの取得に失敗しました:", error));
-// });
-
+// リマインダーの表示と削除・編集機能
 document.addEventListener("DOMContentLoaded", function () {
-    var reminderList = document.getElementById("reminderList");
+    const reminderList = document.getElementById("reminderList");
 
     fetch("reminders.json")
     .then(response => response.json())
     .then(data => {
         data.sort((a, b) => new Date(a.time) - new Date(b.time));
 
-        data.forEach(function(reminder) {
-            var li = document.createElement("li");
+        data.forEach(reminder => {
+            const li = document.createElement("li");
             li.textContent = reminder.message + " - " + new Date(reminder.time).toLocaleString();
 
-            // 🔘 削除ボタンの追加
-            var deleteBtn = document.createElement("button");
+            // 削除ボタン
+            const deleteBtn = document.createElement("button");
             deleteBtn.textContent = "削除";
             deleteBtn.addEventListener("click", function () {
                 fetch("/deleteReminder/" + reminder.id, {
@@ -62,17 +45,87 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then(res => res.json())
                 .then(data => {
                     alert(data.message);
-                    location.reload(); // 表示更新
+                    location.reload();
                 })
                 .catch(error => console.error("削除エラー:", error));
             });
 
+            // 編集ボタン
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "編集";
+            editBtn.addEventListener("click", function () {
+    // 編集用の入力フォームを作成
+    const messageInput = document.createElement("input");
+    messageInput.type = "text";
+    messageInput.value = reminder.message;
+    messageInput.placeholder = "メッセージを編集";
+
+    const timeInput = document.createElement("input");
+    timeInput.type = "datetime-local";
+    timeInput.value = new Date(reminder.time).toISOString().slice(0,16); // ISO形式に整える
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "保存";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "キャンセル";
+
+    // 既存表示をクリアして、編集UIを表示
+    li.innerHTML = "";
+    li.appendChild(messageInput);
+    li.appendChild(timeInput);
+    li.appendChild(saveBtn);
+    li.appendChild(cancelBtn);
+
+    saveBtn.addEventListener("click", function () {
+        const updatedReminder = {
+            message: messageInput.value,
+            time: timeInput.value
+        };
+
+        fetch("/editReminder/" + reminder.id, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(updatedReminder)
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            location.reload();
+        })
+        .catch(error => console.error("編集エラー:", error));
+    });
+
+    cancelBtn.addEventListener("click", function () {
+        location.reload(); // キャンセル時は元に戻す
+    });
+});
+
             li.appendChild(deleteBtn);
+            li.appendChild(editBtn);
             reminderList.appendChild(li);
         });
     })
-    .catch(function(error) {
-        alert("データの取得に失敗しました。ネットワークを確認してください。");
-        console.error("データの取得に失敗しました:", error);
+    .catch(error => {
+        alert("データ取得に失敗しました。ネットワークを確認してください。");
+        console.error("データ取得エラー:", error);
     });
 });
+
+// WebSocketによるリアルタイム更新
+socket.onmessage = function(event) {
+    const reminders = JSON.parse(event.data);
+
+    reminders.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+    const list = document.getElementById("reminderList");
+    list.innerHTML = "";
+
+    reminders.forEach(reminder => {
+        const li = document.createElement("li");
+        li.textContent = reminder.message + "（日付: " + new Date(reminder.time).toLocaleDateString() + "）";
+        list.appendChild(li);
+    });
+};
